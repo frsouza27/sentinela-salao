@@ -4,153 +4,156 @@ from st_supabase_connection import SupabaseConnection
 from datetime import datetime, timedelta
 import time
 
-# --- CONFIGURAÇÃO DE TELA ---
+# --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Espaço da Mulher | Sentinela", page_icon="✨", layout="wide")
 
-# --- DESIGN LUXO: ROSA, GLITTER DOURADO E FONTE CHIQUE ---
+# --- DESIGN PREMIUM: ROSA, GLITTER E FONTES ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;600&display=swap');
-    
     .stApp { background: linear-gradient(135deg, #fff5f8 0%, #ffe4ed 100%); }
-
     .main-title {
         font-family: 'Great Vibes', cursive;
-        background: linear-gradient(to right, #d63384 20%, #d4af37 40%, #d4af37 60%, #d63384 80%);
+        background: linear-gradient(to right, #d63384, #d4af37, #d63384);
         background-size: 200% auto;
-        background-clip: text;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         animation: shine 3s linear infinite;
-        font-size: 4.5rem !important;
-        text-align: center;
-        margin-bottom: 0px;
-        font-weight: bold;
+        font-size: 4.5rem !important; text-align: center; font-weight: bold;
     }
-
     @keyframes shine { to { background-position: 200% center; } }
-
     .sub-title {
-        font-family: 'Cinzel', serif;
-        color: #b8860b;
-        text-align: center;
-        letter-spacing: 5px;
-        font-size: 1rem;
-        margin-top: -20px;
-        margin-bottom: 50px;
-        font-weight: 700;
+        font-family: 'Cinzel', serif; color: #b8860b; text-align: center;
+        letter-spacing: 5px; font-size: 1.1rem; margin-top: -20px; margin-bottom: 40px; font-weight: 700;
     }
-
-    .profile-img {
-        border-radius: 50%;
-        border: 5px solid #d4af37;
-        padding: 5px;
-        background: radial-gradient(circle, #fff3e0, #d4af37);
-        width: 260px; height: 260px;
-        object-fit: cover;
-        box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+    .price-card {
+        background: white; border-left: 5px solid #d4af37; padding: 12px;
+        margin-bottom: 10px; border-radius: 8px; display: flex;
+        justify-content: space-between; align-items: center;
+        box-shadow: 2px 2px 10px rgba(214, 51, 132, 0.1);
     }
-
-    .service-item {
-        background: white;
-        border: 2px solid #fce4ec;
-        border-image: linear-gradient(45deg, #ff85a2, #d4af37) 1;
-        padding: 15px; margin-bottom: 10px;
-        display: flex; justify-content: space-between;
-        box-shadow: 3px 3px 10px rgba(214, 51, 132, 0.05);
-    }
-
+    .price-name { font-family: 'Montserrat', sans-serif; font-weight: 600; color: #444; }
+    .price-value { font-family: 'Cinzel', serif; color: #d63384; font-weight: bold; }
     .stButton>button {
-        background: linear-gradient(45deg, #d63384, #ff85a2, #d4af37) !important;
-        background-size: 200% 200% !important;
-        color: white !important;
-        border-radius: 50px !important;
-        font-weight: bold !important;
-        animation: glitter-btn 4s ease infinite;
+        background: linear-gradient(45deg, #d63384, #d4af37) !important;
+        color: white !important; border-radius: 50px !important; font-weight: bold !important;
+        width: 100%; transition: 0.3s;
     }
-
-    @keyframes glitter-btn { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
     #MainMenu, footer, header {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
 
-# --- CONEXÃO SUPABASE ---
+# --- CONEXÃO SEGURA ---
 try:
     conn = st.connection("supabase", type=SupabaseConnection)
 except:
     st.error("Erro na ligação ao Banco de Dados.")
 
-# --- SEGURANÇA: CAPTURA DE IP E TRAVA ---
+# --- SEGURANÇA SENTINELA (IP) ---
 def get_user_ip():
     try:
         from streamlit.web.server.websocket_headers import _get_websocket_headers
-        headers = _get_websocket_headers()
-        return headers.get("X-Forwarded-For", "Localhost").split(",")[0]
-    except:
-        return "Localhost"
+        return _get_websocket_headers().get("X-Forwarded-For", "127.0.0.1").split(",")[0]
+    except: return "127.0.0.1"
 
-def verificar_agendamento_ativo(ip):
-    # Procura agendamentos que NÃO estejam cancelados para este IP
-    res = conn.table("agendamentos").select("id").eq("ip_cliente", ip).neq("status", "cancelado").execute()
+def possui_reserva_ativa(ip):
+    res = conn.table("agendamentos").select("id").eq("ip_cliente", ip).in_("status", ["pendente", "aguardando"]).execute()
     return len(res.data) > 0
 
-def db_salvar_reserva(nome, tel, serv, cat, data, hora):
-    ip = get_user_ip()
-    if verificar_agendamento_ativo(ip):
-        return False, "⚠️ Já tens uma reserva ativa! Aguarda o cancelamento ou contacta-nos."
-    
-    data_str = data.isoformat()
-    lembrete = (data - timedelta(days=2)).isoformat()
-    
-    conn.table("agendamentos").insert([{
-        "cliente": nome, "telefone": tel, "servico": serv, "categoria": cat,
-        "data": data_str, "hora": hora, "data_lembrete": lembrete,
-        "status": "pendente", "ip_cliente": ip, "criado_em": datetime.now().isoformat()
-    }]).execute()
-    return True, "✅ Reserva confirmada com sucesso! ✨"
+# --- INTERFACE ---
+st.markdown('<h1 class="main-title">Espaço da Mulher</h1>', unsafe_allow_html=True)
+st.markdown('<p class="sub-title">SENTINELA OMNI | PREMIUM SERVICE</p>', unsafe_allow_html=True)
 
-# --- NAVEGAÇÃO ---
 if 'pagina' not in st.session_state: st.session_state.pagina = 'home'
-def navegar(dest): 
-    st.session_state.pagina = dest
+
+def navegar(destino):
+    st.session_state.pagina = destino
     st.rerun()
 
-st.markdown('<h1 class="main-title">Espaço da Mulher</h1>', unsafe_allow_html=True)
-st.markdown('<p class="sub-title">BY BIANCA TELES & GHI OLIVEIRA</p>', unsafe_allow_html=True)
-
+# --- HOME: ESCOLHA DA PROFISSIONAL ---
 if st.session_state.pagina == 'home':
-    col_b, col_g = st.columns(2)
-    with col_b:
-        st.markdown('<div style="text-align:center;"><img src="https://via.placeholder.com/400?text=Bianca" class="profile-img"></div>', unsafe_allow_html=True)
-        if st.button("AGENDAR COM BIANCA ✨"): navegar('bianca')
-    with col_g:
-        st.markdown('<div style="text-align:center;"><img src="https://via.placeholder.com/400?text=Ghi" class="profile-img"></div>', unsafe_allow_html=True)
-        if st.button("AGENDAR COM GHI ✨"): navegar('ghi')
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("<h3 style='text-align:center; font-family:Great Vibes;'>Bianca Teles (Unhas)</h3>", unsafe_allow_html=True)
+        if st.button("VER SERVIÇOS DE UNHAS ✨"): 
+            st.session_state.profissional = "BIANCA"
+            navegar('servicos')
+    with col2:
+        st.markdown("<h3 style='text-align:center; font-family:Great Vibes;'>Ghi Oliveira (Cabelo & Estética)</h3>", unsafe_allow_html=True)
+        if st.button("VER SERVIÇOS DE CABELO/DEPILAÇÃO ✨"): 
+            st.session_state.profissional = "GHI"
+            navegar('servicos')
 
-elif st.session_state.pagina in ['bianca', 'ghi']:
+# --- PÁGINA DE SERVIÇOS SEPARADOS ---
+elif st.session_state.pagina == 'servicos':
     if st.button("← VOLTAR"): navegar('home')
-    prof = st.session_state.pagina.capitalize()
-    st.markdown(f"<h2 style='font-family:Great Vibes; color:#d63384;'>Serviços de {prof}</h2>", unsafe_allow_html=True)
     
-    lista = {"Manicure": "25,00", "Pé e Mão": "50,00", "Cabelo": "100,00"} # Exemplos
-    for s, p in lista.items():
-        st.markdown(f"<div class='service-item'><b>{s}</b><span style='color:#b8860b;'>R$ {p}</span></div>", unsafe_allow_html=True)
-        if st.button(f"Escolher {s}", key=s):
-            st.session_state.serv_escolhido = s
-            st.session_state.cat_escolhida = prof.upper()
+    # DEFINIÇÃO DOS SERVIÇOS POR PROFISSIONAL
+    if st.session_state.profissional == "BIANCA":
+        st.markdown("### ✨ Serviços de Unhas - Bianca")
+        lista = {
+            "Manicure (Simples)": "25,00",
+            "Manicure (c/ Decoração)": "30,00",
+            "Pé (c/ Decoração)": "35,00",
+            "Mão e Pé (Simples)": "50,00",
+            "Mão e Pé (c/ Decoração)": "60,00",
+            "Unha Postiça": "55,00",
+            "Unha em Gel na Tips": "150,00",
+            "Manutenção Gel": "80,00",
+            "Spa dos Pés": "60,00",
+            "Blindagem": "70,00",
+            "Banho de Gel": "80,00",
+            "Esmaltação Simples": "20,00",
+            "Esmaltação (c/ Decoração)": "25,00"
+        }
+    else:
+        st.markdown("### 💇‍♀️ Cabelo & Estética - Ghi")
+        lista = {
+            "Alisamento (A partir de)": "150,00",
+            "Botox Capilar": "100,00",
+            "Escova": "45,00",
+            "Penteados": "100,00",
+            "Tratamento Personalizado": "60,00",
+            "Corte Simples": "50,00",
+            "Aplicação de Coloração": "50,00",
+            "Depilação Meia Perna": "35,00",
+            "Depilação Perna Inteira": "70,00",
+            "Depilação Buço": "20,00",
+            "Depilação Queixo e Buço": "35,00",
+            "Depilação Axila": "35,00",
+            "Designer de Sobrancelha": "35,00",
+            "Designer c/ Henna": "50,00"
+        }
+
+    for s, v in lista.items():
+        st.markdown(f'<div class="price-card"><span class="price-name">{s}</span><span class="price-value">R$ {v}</span></div>', unsafe_allow_html=True)
+        if st.button(f"ESCOLHER {s.upper()}", key=s):
+            st.session_state.servico = s
             navegar('form')
 
+# --- FORMULÁRIO FINAL ---
 elif st.session_state.pagina == 'form':
+    if st.button("← VOLTAR"): navegar('servicos')
+    st.markdown(f"#### Confirmando: {st.session_state.servico} com {st.session_state.profissional}")
+    
     with st.form("final"):
-        nome = st.text_input("Nome Completo")
+        nome = st.text_input("Seu Nome")
         tel = st.text_input("WhatsApp (Ex: 11999999999)")
-        data = st.date_input("Data")
-        hora = st.selectbox("Hora", [f"{h:02d}:00" for h in range(8, 20)])
-        if st.form_submit_button("CONFIRMAR ✨"):
-            ok, msg = db_salvar_reserva(nome, tel, st.session_state.serv_escolhido, st.session_state.cat_escolhida, data, hora)
-            if ok:
+        data = st.date_input("Escolha a Data")
+        hora = st.selectbox("Escolha a Hora", [f"{h:02d}:00" for h in range(8, 20)])
+        
+        if st.form_submit_button("FINALIZAR ✨"):
+            ip = get_user_ip()
+            if possui_reserva_ativa(ip):
+                st.error("⚠️ Segurança: Você já possui um agendamento ativo!")
+            elif not nome or not tel:
+                st.warning("Preencha todos os campos.")
+            else:
+                conn.table("agendamentos").insert([{
+                    "cliente": nome, "telefone": tel, "servico": st.session_state.servico,
+                    "categoria": st.session_state.profissional, "data": data.isoformat(),
+                    "hora": hora, "ip_cliente": ip, "status": "pendente"
+                }]).execute()
                 st.balloons()
-                st.success(msg)
+                st.success("✨ Agendamento enviado! Aguarde o contato do Sentinela.")
                 time.sleep(2); navegar('home')
-            else: st.error(msg)
-    if st.button("Cancelar"): navegar('home')
