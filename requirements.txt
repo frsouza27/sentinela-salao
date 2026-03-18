@@ -3,9 +3,3 @@ pandas
 st-supabase-connection
 supabase
 pywhatkit
-
-streamlit
-pandas
-st-supabase-connection
-supabase
-pywhatkit
