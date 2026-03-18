@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import time
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Espaço da Mulher | Sentinela", page_icon="✨", layout="wide")
+st.set_page_config(page_title="Espaço da Mulher BY Bianca Teles e Ghi Oliveira", page_icon="✨", layout="wide")
 
 # --- DESIGN PREMIUM: ROSA, GLITTER E FONTES ---
 st.markdown("""
